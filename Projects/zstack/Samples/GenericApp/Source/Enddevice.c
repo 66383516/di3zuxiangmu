@@ -74,3 +74,65 @@ void GenericApp_Init( byte task_id )
 }
 
 
+/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+* 函数名  ：GenericApp_ProcessEvent
+* 参数    ：byte task_id,UINT16 events
+* 返回    ：UINT16
+* 作者    ：Zhengchaoyue
+* 时间    ：2021/5/18
+* 描述    ：消息处理
+----------------------------------------------------------------*/
+
+UINT16 GenericApp_ProcessEvent ( byte task_id,UINT16 events )
+{
+    afIncomingMSGPacket_t *MSGpkt;             //定义了一个指向接收消息结构体的指针MSGpkt
+    if (events & SYS_EVENT_MSG )
+    {
+        MSGpkt = (afIncomingMSGPacket_t *)osal_msg_receive (GenericApp_TaskID ) ;  //使用osal_msg _receive函数从消息队列上接收消息
+        while ( MSGpkt )
+        {
+            switch ( MSGpkt->hdr.event )
+            {
+            case ZDO_STATE_CHANGE:          //对接收到的消息进行判断
+                GenericApp_NwkState = ( devStates_t )(MSGpkt->hdr.status) ;
+                if(GenericApp_NwkState == DEV_END_DEVICE)  //对节点设备类型进行判断，如果是终端节点（设备类型码为DEV_END DEVICE)，再执行下一行代码，实现无线数据发送。
+                {
+                    GenericApp_SendTheMessage();
+                }
+                break;
+            default:
+                break;
+            }
+            osal_msg_deallocate( (uint8 *)MSGpkt ); //调用osal_msg_deallocate函数将其占据的堆内存释放
+            MSGpkt = (afIncomingMSGPacket_t *) osal_msg_receive   //处理完一个消息后，再从消息队列里接收消息，然后对其进行相应的处理，直到所有消息都处理完为止
+                ( GenericApp_TaskID );
+        }
+        return (events ^ SYS_EVENT_MSG) ;
+    }
+    return 0;
+}
+/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+* 函数名  ：GenericApp_SendTheMessage
+* 参数    ：void
+* 返回    ：void
+* 作者    ：Zhengchaoyue
+* 时间    ：2021/5/18
+* 描述    ：数据发送
+----------------------------------------------------------------*/
+void GenericApp_SendTheMessage ( void )
+{
+    unsigned char theMessageData[4] = "LED" ;   //定义了一个数组theMessageData，用于存放要发送的数据。
+    afAddrType_t my_DstAddr;   //定义了一个afAddrType_t类型的变量my_DstAddr，因为数据发送函数AF_DataRequest的第一个参数就是这种类型的变量。
+    my_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;  //将发送地址模式设置为单播（Addr16Bit表示单播)
+    my_DstAddr.endPoint = GENERICAPP_ENDPOINT;    //初始化端口号
+    my_DstAddr.addr.shortAddr = 0x0000;           //直接指定协调器的网络地址
+    AF_DataRequest ( &my_DstAddr,&GenericApp_epDesc,    //调用数据发送函数AF_DataRequest进行无线数据的发送
+                    GENERICAPP_CLUSTERID,
+                    3,
+                    theMessageData,
+                    &GenericApp_TransID,
+                    AF_DISCV_ROUTE,
+                    AF_DEFAULT_RADIUS );
+    HalLedBlink(HAL_LED_2,0,50,500);       //调用HalLedBlink函数，使终端节点的LED2闪烁
+}
+
