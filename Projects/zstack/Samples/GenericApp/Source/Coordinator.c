@@ -102,3 +102,30 @@ UINT16 GenericApp_ProcessEvent ( byte task_id,UINT16 events )
     }
     return 0;
 }
+
+/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+* 函数名  ：GenericApp_MessageMSGCB
+* 参数    ：afIncomingMSGPacket_t *pkt
+* 返回    ：void
+* 作者    ：dengdawei
+* 时间    ：2021/5/18
+* 描述    ：数据处理
+----------------------------------------------------------------*/
+void GenericApp_MessageMSGCB ( afIncomingMSGPacket_t *pkt )
+{
+    unsigned char buffer[4] = "   ";
+    switch ( pkt->clusterId )
+    {
+    case GENERICAPP_CLUSTERID:
+        osal_memcpy (buffer,pkt->cmd.Data,3);  //将收到的数据拷贝到缓冲区buffer 中
+        if ((buffer[0] == 'L') || (buffer[1] == 'E') || (buffer [2]=='D'))  //判断接收到的数据是不是“LED”三个字符，如果是这三个字符，则运行下一行使LED2闪烁，如果接收到的不是这三个字符，则点亮LED2即可
+        {
+            HalLedBlink(HAL_LED_2,0,50,500);
+        }
+        else
+        {
+            HalLedSet(HAL_LED_2,HAL_LED_MODE_ON) ;
+        }
+        break;
+    }
+}
