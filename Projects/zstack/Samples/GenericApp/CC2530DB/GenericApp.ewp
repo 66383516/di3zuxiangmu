@@ -6370,6 +6370,9 @@
   <group>
     <name>App</name>
     <file>
+      <name>$PROJ_DIR$\..\Source\Coordinator.c</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\Source\Coordinator.h</name>
     </file>
     <file>
